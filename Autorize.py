@@ -88,6 +88,7 @@ class BurpExtender(IBurpExtender, ITab, IHttpListener, IMessageEditorController,
                                     "Enforced!"]
         self.intercept = 0
         self.lastCookies = ""
+        self._ignoreOptions = True
 
         self.initInterceptionFilters()
 
@@ -586,12 +587,12 @@ class BurpExtender(IBurpExtender, ITab, IHttpListener, IMessageEditorController,
     ## Events functions
     #
     def startOrStop(self, event):
-        if self.startButton.getText() == "Autorize is off":
-            self.startButton.setText("Autorize is on")
+        if self.startButton.getText() == "Autorize off":
+            self.startButton.setText("Autorize on")
             self.startButton.setBackground(Color.GREEN)
             self.intercept = 1
         else:
-            self.startButton.setText("Autorize is off")
+            self.startButton.setText("Autorize off")
             self.startButton.setBackground(Color(255, 100, 91, 255))
             self.intercept = 0
 
@@ -1032,6 +1033,10 @@ class BurpExtender(IBurpExtender, ITab, IHttpListener, IMessageEditorController,
             self.fetchButton.setEnabled(True)
 
         if (self.intercept == 1) and (toolFlag == self._callbacks.TOOL_PROXY):
+            if self._ignoreOptions: # OPTIONS requests can gtfo
+                firstHeader = self._helpers.analyzeRequest(messageInfo).getHeaders()[0]
+                if firstHeader.startswith("OPTIONS"):
+                    return
             if self.prevent304.isSelected():
                 if messageIsRequest:
                     requestHeaders = list(self._helpers.analyzeRequest(messageInfo).getHeaders())
@@ -1064,6 +1069,7 @@ class BurpExtender(IBurpExtender, ITab, IHttpListener, IMessageEditorController,
                     else:
                         urlString = str(self._helpers.analyzeRequest(messageInfo).getUrl())
                         do_the_check = 1
+
                         for i in range(0, self.IFList.getModel().getSize()):
                             if self.IFList.getModel().getElementAt(i).split(":")[0] == "Scope items only":
                                 currentURL = URL(urlString)
